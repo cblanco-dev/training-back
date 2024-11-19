@@ -1,0 +1,131 @@
+org: cblanco
+
+service: camilo-training-pets-back
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  environment:
+    PETS_TABLE: !ImportValue PetsTableName
+    FOUNDATIONS_TABLE: !ImportValue FoundationsTableName
+    S3_BUCKET: !ImportValue S3TrainingBucket     
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "dynamodb:PutItem"
+            - "dynamodb:GetItem"
+            - "dynamodb:Query"
+            - "dynamodb:Scan"
+            - "dynamodb:UpdateItem"
+            - "dynamodb:DeleteItem"
+          Resource: "*"
+        - Effect: "Allow"
+          Action:
+            - "s3:PutObject"
+            - "s3:GetObject"
+            - "s3:ListBucket"
+          Resource:
+            - "arn:aws:s3:::camilo-training-s3-petjsonbucketf0e016bc-y4upsoombaeu"
+            - "arn:aws:s3:::camilo-training-s3-petjsonbucketf0e016bc-y4upsoombaeu/*"
+
+layers:
+  awsSdkLayer:
+    path: layers/utils
+
+package:
+  individually: true
+  exclude:
+    - node_modules/**
+  excludeDevDependencies: true  
+
+functions:
+  getPets:
+    handler: src/pets/get-handler.getPets
+    events:
+      - http:
+          path: pets
+          method: get
+          request:
+            parameters:
+              querystrings:
+                foundationId: true
+                petId: false        
+                animalType: false   
+                breed: false        
+                name: false         
+    layers:
+      - { Ref: AwsSdkLayerLambdaLayer }
+    package:
+      exclude:
+        - node_modules/**
+
+  addPet:
+    handler: src/pets/post-handler.addPet
+    events:
+      - http:
+          path: pets
+          method: post
+    layers:
+      - { Ref: AwsSdkLayerLambdaLayer } 
+    package:
+      exclude:
+        - node_modules/**   
+
+  updatePet:
+    handler: src/pets/patch-handler.updatePet
+    events:
+      - http:
+          path: pets
+          method: patch
+          request:
+            parameters:
+              querystrings:
+                foundationId: true
+                petId: true
+    layers:
+      - { Ref: AwsSdkLayerLambdaLayer } 
+    package:
+      exclude:
+        - node_modules/**  
+  
+  deletePet:
+    handler: src/pets/delete-handler.deletePet
+    events: 
+      - http: 
+          path: pets
+          method: delete
+          request:
+            parameters: 
+              querystrings:
+                foundationId: true
+                petId: true
+     
+  getFoundation:
+    handler: src/foundations/get-handler.getFoundation
+    events:
+      - http:
+          path: foundations/{id}
+          method: get
+    layers:
+      - { Ref: AwsSdkLayerLambdaLayer } 
+    package:
+      exclude:
+        - node_modules/**        
+
+  addFoundation:
+    handler: src/foundations/post-handler.addFoundation
+    events:
+      - http:
+          path: foundations
+          method: post  
+    layers:
+      - { Ref: AwsSdkLayerLambdaLayer } 
+    package:
+      exclude:
+        - node_modules/**        
+
+
+        
